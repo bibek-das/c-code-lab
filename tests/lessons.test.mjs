@@ -12,12 +12,18 @@ const cases = {
   'multiplication-table': [1, 3, 12], 'count-digits': [1, 10, 482, 9999],
   'reverse-number': [1, 10, 482, 1200, 9999], 'sum-digits': [1, 10, 482, 9999],
   factorial: [0, 1, 5, 8], 'prime-check': [1, 2, 4, 7, 9, 25],
+  'nested-square': [1, 3, 6], 'nested-rectangle': [1, 5, 6],
+  'nested-growing': [1, 5, 6], 'nested-shrinking': [1, 5, 6],
+  'nested-growing-while': [1, 5, 6], 'nested-growing-countdown': [1, 5, 6],
+  'nested-shrinking-while': [1, 5, 6], 'nested-number-growing': [1, 5, 6],
+  'nested-number-shrinking': [1, 5, 6], 'nested-binary': [1, 5, 6],
 };
 
-test('ten lessons and seven topics are available', () => {
-  assert.equal(problems.length, 10);
+test('twenty lessons and seven topics are available', () => {
+  assert.equal(problems.length, 20);
   assert.equal(topics.length, 7);
-  assert.equal(new Set(problems.map(p => p.id)).size, 10);
+  assert.equal(new Set(problems.map(p => p.id)).size, 20);
+  assert.equal(problems.filter(p => p.section === 'Nested loops').length, 10);
 });
 
 test('traces highlight valid lines and end with their full output', () => {
@@ -31,6 +37,26 @@ test('traces highlight valid lines and end with their full output', () => {
       assert.equal(typeof step.detail, 'string');
       assert.equal(typeof step.output, 'string');
     }
+  }
+});
+
+test('nested patterns have the intended shape for input 5', () => {
+  const expected = {
+    'nested-square': ['* * * * *', '* * * * *', '* * * * *', '* * * * *', '* * * * *'],
+    'nested-rectangle': Array(5).fill('* * * * * * *'),
+    'nested-growing': ['*', '* *', '* * *', '* * * *', '* * * * *'],
+    'nested-shrinking': ['* * * * *', '* * * *', '* * *', '* *', '*'],
+    'nested-growing-while': ['*', '* *', '* * *', '* * * *', '* * * * *'],
+    'nested-growing-countdown': ['*', '* *', '* * *', '* * * *', '* * * * *'],
+    'nested-shrinking-while': ['* * * * *', '* * * *', '* * *', '* *', '*'],
+    'nested-number-growing': ['1', '1 2', '1 2 3', '1 2 3 4', '1 2 3 4 5'],
+    'nested-number-shrinking': ['1 2 3 4 5', '1 2 3 4', '1 2 3', '1 2', '1'],
+    'nested-binary': ['1', '0 1', '1 0 1', '0 1 0 1', '1 0 1 0 1'],
+  };
+  for (const problem of problems.filter(p => p.section === 'Nested loops')) {
+    const rows = problem.trace(5).at(-1).output.trim().split('\n').map(row => row.trim());
+    assert.deepEqual(rows, expected[problem.id], problem.id);
+    assert.ok(problem.trace(5).some(step => step.phase === 'print' && step.cell), problem.id);
   }
 });
 

@@ -12,7 +12,7 @@ Visit `http://localhost:4173`.
 
 ## Add a lecturer-supplied problem
 
-Edit `dist/assets/problems.js`. Each problem has a topic ID, statement, example, input bounds, C source lines, and a `trace(input)` function. The trace returns an array of execution snapshots:
+Edit `dist/assets/problems.js` for the original loop lessons or `dist/assets/nested-loops.js` for the nested loop lessons. Each problem has a topic ID, statement, example, input bounds, C source lines, and a `trace(input)` function. The trace returns an array of execution snapshots:
 
 ```js
 {
@@ -25,7 +25,7 @@ Edit `dist/assets/problems.js`. Each problem has a topic ID, statement, example,
 }
 ```
 
-The Loops section contains ten lessons. Their traces are based on the displayed C solutions. Keep accepted inputs small enough that the number of steps stays comfortable for students.
+The Loops section contains ten fundamental lessons and ten nested loop pattern lessons. The nested loop trace also records the newly printed cell so the pattern builder can animate it. Their traces are based on the displayed C solutions. Keep accepted inputs small enough that the number of steps stays comfortable for students.
 
 While using the visualizer, the lesson switcher stays at the top of the screen. Students can choose another problem from its dropdown or use the previous/next buttons. Playback controls stay visible at the bottom of the workspace, and the active code line remains in view for longer solutions.
 
