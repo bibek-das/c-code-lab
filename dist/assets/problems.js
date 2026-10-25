@@ -1,4 +1,4 @@
-import { nestedLoopProblems } from './nested-loops.js';
+import { nestedLoopProblems } from './nested-loops.js?v=2';
 
 export const topics = [
   { id: 'conditionals', label: 'Conditional statements', short: 'Decisions', icon: '◇', color: '#ad72e6', description: 'Follow the branches that make a program decide.' },
