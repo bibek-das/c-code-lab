@@ -1,4 +1,5 @@
 import { nestedLoopProblems } from './nested-loops.js?v=2';
+import { arrayProblems } from './array-problems.js?v=3';
 
 export const topics = [
   { id: 'conditionals', label: 'Conditional statements', short: 'Decisions', icon: '◇', color: '#ad72e6', description: 'Follow the branches that make a program decide.' },
@@ -169,4 +170,5 @@ export const problems = [
   { id: 'factorial', topic: 'loops', label: 'PROBLEM 09', title: 'Factorial', level: 'Intermediate', time: '4 min', statement: 'Input N and calculate N! = 1 × 2 × ... × N. By definition, 0! is 1.', example: { input: '5', output: '120' }, input: { label: 'Choose N', min: 0, max: 8, default: 5 }, code: program('    int n;', '    scanf("%d", &n);', '    int fact = 1;', '    for (int i = 1; i <= n; i++) {', '        fact *= i;', '    }', '    printf("%d", fact);'), trace: factorial },
   { id: 'prime-check', topic: 'loops', label: 'PROBLEM 10', title: 'Prime Check', level: 'Intermediate', time: '6 min', statement: 'Input N and check for divisors from 2 to N − 1. One is neither prime nor composite.', example: { input: '7', output: '7 is prime' }, input: { label: 'Choose N', min: 1, max: 25, default: 7 }, code: program('    int n;', '    scanf("%d", &n);', '    if (n < 2) {', '        printf("%d is neither prime nor composite", n);', '        return 0;', '    }', '    int isPrime = 1;', '    for (int i = 2; i < n; i++) {', '        if (n % i == 0) {', '            isPrime = 0;', '            break;', '        }', '    }', '    if (isPrime == 1) {', '        printf("%d is prime", n);', '    } else {', '        printf("%d is composite", n);', '    }'), trace: prime },
   ...nestedLoopProblems,
+  ...arrayProblems,
 ];

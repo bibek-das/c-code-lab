@@ -17,18 +17,25 @@ const cases = {
   'nested-growing-while': [1, 5, 6], 'nested-growing-countdown': [1, 5, 6],
   'nested-shrinking-while': [1, 5, 6], 'nested-number-growing': [1, 5, 6],
   'nested-number-shrinking': [1, 5, 6], 'nested-binary': [1, 5, 6],
+  'array-smallest': [[7, 3, 9, -2, 4], [5], [4, 1, 1, 7], [-3, -8, -1, -8, 2, 0, 9, 1]],
 };
 
-test('twenty lessons and seven topics are available', () => {
-  assert.equal(problems.length, 20);
+test('twenty-one lessons and seven topics are available', () => {
+  assert.equal(problems.length, 21);
   assert.equal(topics.length, 7);
-  assert.equal(new Set(problems.map(p => p.id)).size, 20);
+  assert.equal(new Set(problems.map(p => p.id)).size, 21);
   assert.equal(problems.filter(p => p.section === 'Nested loops').length, 10);
+  assert.equal(problems.filter(p => p.topic === 'arrays').length, 1);
 });
 
 test('traces highlight valid lines and end with their full output', () => {
   for (const problem of problems) for (const input of cases[problem.id]) {
-    assert.ok(input >= problem.input.min && input <= problem.input.max);
+    if (problem.input.type === 'array') {
+      assert.ok(input.length >= problem.input.minLength && input.length <= problem.input.maxLength);
+      assert.ok(input.every(value => value >= problem.input.minValue && value <= problem.input.maxValue));
+    } else {
+      assert.ok(input >= problem.input.min && input <= problem.input.max);
+    }
     const steps = problem.trace(input);
     assert.ok(steps.length > 0, problem.id);
     assert.equal(steps.at(-1).phase, 'done', problem.id);
@@ -38,6 +45,15 @@ test('traces highlight valid lines and end with their full output', () => {
       assert.equal(typeof step.output, 'string');
     }
   }
+});
+
+test('array trace marks comparisons and keeps the first matching minimum index', () => {
+  const lesson = problems.find(problem => problem.id === 'array-smallest');
+  const steps = lesson.trace([4, 1, 1, 7]);
+  assert.equal(steps.at(-1).output, 'Smallest: 1 at index 1');
+  assert.deepEqual(steps.filter(step => step.phase === 'compare').map(step => step.currentIndex), [0, 1, 2, 3]);
+  assert.equal(steps.find(step => step.phase === 'update').bestIndex, 1);
+  assert.equal(steps.at(-1).readCount, 4);
 });
 
 test('nested patterns have the intended shape for input 5', () => {
@@ -71,7 +87,8 @@ test('trace output matches compiled C code', { skip: !gccAvailable }, () => {
       const build = spawnSync('gcc', ['-std=c99', '-Wall', '-Wextra', source, '-o', executable], { encoding: 'utf8' });
       assert.equal(build.status, 0, `${problem.id}: ${build.stderr}`);
       for (const input of cases[problem.id]) {
-        const run = spawnSync(executable, { input: `${input}\n`, encoding: 'utf8' });
+        const stdin = problem.input.type === 'array' ? `${input.length}\n${input.join(' ')}\n` : `${input}\n`;
+        const run = spawnSync(executable, { input: stdin, encoding: 'utf8' });
         assert.equal(run.status, 0, `${problem.id} input ${input}: ${run.stderr}`);
         assert.equal(problem.trace(input).at(-1).output, run.stdout.replace(/\r\n/g, '\n'), `${problem.id} input ${input}`);
       }
