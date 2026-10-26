@@ -1,7 +1,7 @@
 import { topics, problems } from './problems.js?v=5';
 
 const app = document.querySelector('#app');
-const state = { topic: 'loops', section: 'Loop fundamentals', problem: problems[0], input: problems[0].input.default, step: 0, playing: false, speed: 850, timer: null, projector: false, drawerOpen: false, drawerTopic: 'loops', drawerSection: 'Loop fundamentals', drawerProblem: problems[0].id };
+const state = { topic: 'loops', section: 'Loop fundamentals', problem: problems[0], input: problems[0].input.default, step: 0, playing: false, speed: 850, timer: null, projector: false, drawerOpen: false, drawerTopic: 'loops', drawerSection: 'Loop fundamentals', drawerProblem: problems[0].id, showExplanation: true, codeFont: 16, codeWidth: 54, codeHeight: null };
 const icons = {
   play: '<path d="m8 5 11 7-11 7V5Z"/>', pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   back: '<path d="m17 5-10 7 10 7V5Z"/>', next: '<path d="m7 5 10 7-10 7V5Z"/>', reset: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/>',
@@ -123,9 +123,9 @@ function render() {
         <div class="lab-shell"><div class="lab-topline"><div class="lab-title"><span class="lab-icon">{ }</span><div><small>NOW VISUALIZING</small><strong>${escapeHTML(lesson.title)}</strong></div></div><span class="sample-pill">${escapeHTML(lesson.label)}</span></div>
           <div class="problem-statement"><div class="statement-icon">${svg('book', 20)}</div><div><h3>Problem statement</h3><p>${escapeHTML(lesson.statement)}</p><div class="example-row"><span>EXAMPLE</span><code>input: ${escapeHTML(lesson.example.input)}</code><span class="example-arrow">→</span><code class="example-output">${escapeHTML(lesson.example.output)}</code></div></div></div>
           ${inputPanel(lesson)}
-          <div class="visual-grid"><div class="code-panel"><div class="panel-header"><span><i class="panel-dot"></i> SOLUTION.C</span><span>C</span></div><div class="code-list" role="list" aria-label="C source code">${sourceCode.map((line,i) => `<div class="code-line ${current.line === i+1 ? 'active-line' : ''}" role="listitem" ${current.line === i+1 ? 'aria-current="step"' : ''}><span class="line-number">${String(i+1).padStart(2,'0')}</span><code>${highlightC(line) || ' '}</code>${current.line === i+1 ? '<span class="line-cursor">●</span>' : ''}</div>`).join('')}</div><div class="code-footer"><span>● Current line</span><span>View only · copying disabled</span></div></div>
-            <div class="state-column"><div class="explain-panel"><div class="panel-header"><span><i class="panel-dot orange"></i> WHAT'S HAPPENING</span><span>STEP ${String(state.step+1).padStart(2,'0')}</span></div><div class="explain-body"><div class="step-label">${current.phase === 'done' ? 'FINISHED' : 'CURRENT STEP'}</div><h3>${escapeHTML(current.title)}</h3><p>${escapeHTML(current.detail)}</p><div class="line-reference">${svg('arrow', 15)} Line ${current.line} is active</div></div></div>${patternBoard(lesson, current, state.input)}${arrayBoard(lesson, current, state.input)}<div class="variables-panel"><div class="panel-header"><span><i class="panel-dot purple"></i> VARIABLE WATCH</span><span>LIVE VALUES</span></div><div class="variable-rows">${Object.entries(current.variables).map(([name,value]) => `<div class="variable-row"><span class="variable-name">${name}</span><span class="variable-type">int</span><strong class="variable-value ${value === null ? 'unset' : ''}">${value === null ? 'unset' : value}</strong></div>`).join('')}</div></div><div class="output-panel"><div class="panel-header"><span><i class="panel-dot green"></i> CONSOLE OUTPUT</span><span>STDOUT</span></div><div class="console-output"><span class="console-prompt">&gt;</span><code>${current.output ? escapeHTML(current.output) : '<span class="console-placeholder">Waiting for output...</span>'}</code><span class="console-cursor"></span></div></div></div></div>
-          <div class="playback"><div class="playback-controls"><button class="icon-button" id="reset" type="button" title="Reset" aria-label="Reset">${svg('reset')}</button><button class="icon-button" id="previous" type="button" title="Previous step" aria-label="Previous step" ${state.step === 0 ? 'disabled' : ''}>${svg('back')}</button><button class="play-button" id="play" type="button" aria-label="${state.playing ? 'Pause' : 'Play'}">${svg(state.playing ? 'pause' : 'play', 20)}<span>${state.playing ? 'Pause' : 'Play'}</span></button><button class="icon-button" id="next" type="button" title="Next step" aria-label="Next step" ${state.step === steps.length-1 ? 'disabled' : ''}>${svg('next')}</button></div><div class="progress-wrap"><div class="progress-top"><span>STEP ${String(state.step+1).padStart(2,'0')} <b>/ ${String(steps.length).padStart(2,'0')}</b></span><span>${Math.round((state.step/(steps.length-1))*100)}%</span></div><input id="scrubber" type="range" min="0" max="${steps.length-1}" value="${state.step}" aria-label="Jump to step" style="--progress:${(state.step/(steps.length-1))*100}%"/></div><div class="speed-control"><label for="speed">SPEED</label><select id="speed" aria-label="Playback speed"><option value="1400" ${state.speed === 1400 ? 'selected' : ''}>0.5×</option><option value="850" ${state.speed === 850 ? 'selected' : ''}>1×</option><option value="430" ${state.speed === 430 ? 'selected' : ''}>2×</option></select></div><div class="view-actions"><button class="view-button" id="projector-mode" type="button" aria-pressed="${state.projector}" title="Larger text for a projector">${state.projector ? '◉' : '◯'} Projector</button><button class="view-button" id="fullscreen-mode" type="button" aria-pressed="${Boolean(document.fullscreenElement)}" title="Toggle fullscreen">⛶ <span>${document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'}</span></button></div></div>
+          <div class="visual-grid" style="--code-width:${state.codeWidth}%"><div class="code-panel ${state.codeHeight ? 'custom-height' : ''}" style="--code-font-size:${state.codeFont}px;${state.codeHeight ? `--code-height:${state.codeHeight}px` : ''}"><div class="panel-header"><span><i class="panel-dot"></i> SOLUTION.C</span><div class="code-font-controls" role="group" aria-label="Code font size"><button id="code-font-down" type="button" aria-label="Decrease code font size" ${state.codeFont <= 12 ? 'disabled' : ''}>A−</button><output id="code-font-size">${state.codeFont}px</output><button id="code-font-up" type="button" aria-label="Increase code font size" ${state.codeFont >= 24 ? 'disabled' : ''}>A+</button></div></div><div class="code-list" role="list" aria-label="C source code">${sourceCode.map((line,i) => `<div class="code-line ${current.line === i+1 ? 'active-line' : ''}" role="listitem" ${current.line === i+1 ? 'aria-current="step"' : ''}><span class="line-number">${String(i+1).padStart(2,'0')}</span><code>${highlightC(line) || ' '}</code>${current.line === i+1 ? '<span class="line-cursor">●</span>' : ''}</div>`).join('')}</div><div class="code-footer"><span>● Current line</span><span>View only · copying disabled</span><span class="code-height-grip" id="code-height-grip" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="Resize code box height" title="Drag to resize code box height">↕</span></div></div><div class="code-width-grip" id="code-width-grip" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize code box width" title="Drag to resize code box width"><span>↔</span></div>
+            <div class="state-column ${state.showExplanation ? '' : 'explanation-hidden'}">${state.showExplanation ? `<div class="explain-panel"><div class="panel-header"><span><i class="panel-dot orange"></i> WHAT'S HAPPENING</span><span>STEP ${String(state.step+1).padStart(2,'0')}</span></div><div class="explain-body"><div class="step-label">${current.phase === 'done' ? 'FINISHED' : 'CURRENT STEP'}</div><h3>${escapeHTML(current.title)}</h3><p>${escapeHTML(current.detail)}</p><div class="line-reference">${svg('arrow', 15)} Line ${current.line} is active</div></div></div>` : ''}${patternBoard(lesson, current, state.input)}${arrayBoard(lesson, current, state.input)}<div class="variables-panel"><div class="panel-header"><span><i class="panel-dot purple"></i> VARIABLE WATCH</span><span>LIVE VALUES</span></div><div class="variable-rows">${Object.entries(current.variables).map(([name,value]) => `<div class="variable-row"><span class="variable-name">${name}</span><span class="variable-type">int</span><strong class="variable-value ${value === null ? 'unset' : ''}">${value === null ? 'unset' : value}</strong></div>`).join('')}</div></div><div class="output-panel"><div class="panel-header"><span><i class="panel-dot green"></i> CONSOLE OUTPUT</span><span>STDOUT</span></div><div class="console-output"><span class="console-prompt">&gt;</span><code>${current.output ? escapeHTML(current.output) : '<span class="console-placeholder">Waiting for output...</span>'}</code><span class="console-cursor"></span></div></div></div></div>
+          <div class="playback"><div class="playback-controls"><button class="icon-button" id="reset" type="button" title="Reset" aria-label="Reset">${svg('reset')}</button><button class="icon-button" id="previous" type="button" title="Previous step" aria-label="Previous step" ${state.step === 0 ? 'disabled' : ''}>${svg('back')}</button><button class="play-button" id="play" type="button" aria-label="${state.playing ? 'Pause' : 'Play'}">${svg(state.playing ? 'pause' : 'play', 20)}<span>${state.playing ? 'Pause' : 'Play'}</span></button><button class="icon-button" id="next" type="button" title="Next step" aria-label="Next step" ${state.step === steps.length-1 ? 'disabled' : ''}>${svg('next')}</button></div><div class="progress-wrap"><div class="progress-top"><span>STEP ${String(state.step+1).padStart(2,'0')} <b>/ ${String(steps.length).padStart(2,'0')}</b></span><span>${Math.round((state.step/(steps.length-1))*100)}%</span></div><input id="scrubber" type="range" min="0" max="${steps.length-1}" value="${state.step}" aria-label="Jump to step" style="--progress:${(state.step/(steps.length-1))*100}%"/></div><div class="speed-control"><label for="speed">SPEED</label><select id="speed" aria-label="Playback speed"><option value="1400" ${state.speed === 1400 ? 'selected' : ''}>0.5×</option><option value="850" ${state.speed === 850 ? 'selected' : ''}>1×</option><option value="430" ${state.speed === 430 ? 'selected' : ''}>2×</option></select></div><div class="view-actions"><button class="view-button" id="toggle-explanation" type="button" aria-pressed="${state.showExplanation}">${state.showExplanation ? 'Hide explanation' : 'Show explanation'}</button><button class="view-button" id="projector-mode" type="button" aria-pressed="${state.projector}" title="Larger text for a projector">${state.projector ? '◉' : '◯'} Projector</button><button class="view-button" id="fullscreen-mode" type="button" aria-pressed="${Boolean(document.fullscreenElement)}" title="Toggle fullscreen">⛶ <span>${document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'}</span></button></div></div>
         </div>
       </section>
     </main>
@@ -169,6 +169,48 @@ function setArraySize(size) {
   const { minLength, maxLength } = state.problem.input;
   const length = Math.max(minLength, Math.min(maxLength, size));
   stop(); state.input = Array.from({ length }, (_, index) => state.input[index] ?? 0); state.step = 0; render();
+}
+function adjustCodeSize(axis, amount) {
+  stop();
+  if (axis === 'width') state.codeWidth = Math.max(35, Math.min(70, state.codeWidth + amount));
+  else state.codeHeight = Math.max(240, Math.min(850, (state.codeHeight ?? document.querySelector('.code-panel').offsetHeight) + amount));
+  render();
+  document.querySelector(axis === 'width' ? '#code-width-grip' : '#code-height-grip').focus();
+}
+function changeCodeFont(amount, buttonId) {
+  state.codeFont = Math.max(12, Math.min(24, state.codeFont + amount));
+  render();
+  document.querySelector(buttonId).focus();
+}
+function beginCodeResize(axis, event) {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  stop();
+  const grid = document.querySelector('.visual-grid');
+  const panel = document.querySelector('.code-panel');
+  const gridStyle = getComputedStyle(grid);
+  const gridLeft = grid.getBoundingClientRect().left + parseFloat(gridStyle.paddingLeft);
+  const gridWidth = grid.clientWidth - parseFloat(gridStyle.paddingLeft) - parseFloat(gridStyle.paddingRight);
+  const panelTop = panel.getBoundingClientRect().top;
+  const move = e => {
+    if (axis === 'width') {
+      state.codeWidth = Math.max(35, Math.min(70, Math.round((e.clientX - gridLeft) / gridWidth * 100)));
+      grid.style.setProperty('--code-width', `${state.codeWidth}%`);
+    } else {
+      state.codeHeight = Math.max(240, Math.min(850, Math.round(e.clientY - panelTop)));
+      panel.classList.add('custom-height');
+      panel.style.setProperty('--code-height', `${state.codeHeight}px`);
+    }
+  };
+  const end = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('pointercancel', end);
+    render();
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
 }
 function setDrawer(open) {
   if (open) { state.drawerTopic = state.problem.topic; state.drawerSection = sectionName(state.problem); state.drawerProblem = state.problem.id; }
@@ -233,6 +275,17 @@ function bind() {
   document.querySelector('#next-problem').addEventListener('click', () => { const matches = drawerProblems(); selectProblem(matches[matches.findIndex(problem => problem.id === state.drawerProblem) + 1]?.id); });
   document.querySelector('#projector-mode').addEventListener('click', () => { state.projector = !state.projector; render(); });
   document.querySelector('#fullscreen-mode').addEventListener('click', toggleFullscreen);
+  document.querySelector('#toggle-explanation').addEventListener('click', () => { state.showExplanation = !state.showExplanation; render(); });
+  document.querySelector('#code-font-down').addEventListener('click', () => changeCodeFont(-1, '#code-font-down'));
+  document.querySelector('#code-font-up').addEventListener('click', () => changeCodeFont(1, '#code-font-up'));
+  for (const [id, axis] of [['#code-width-grip', 'width'], ['#code-height-grip', 'height']]) {
+    const grip = document.querySelector(id);
+    grip.addEventListener('pointerdown', e => beginCodeResize(axis, e));
+    grip.addEventListener('keydown', e => {
+      const delta = axis === 'width' ? (e.key === 'ArrowRight' ? 2 : e.key === 'ArrowLeft' ? -2 : 0) : (e.key === 'ArrowDown' ? 30 : e.key === 'ArrowUp' ? -30 : 0);
+      if (delta) { e.preventDefault(); adjustCodeSize(axis, delta); }
+    });
+  }
   if (state.problem.input.type === 'array') {
     document.querySelector('#array-remove').addEventListener('click', () => setArraySize(state.input.length - 1));
     document.querySelector('#array-add').addEventListener('click', () => setArraySize(state.input.length + 1));
