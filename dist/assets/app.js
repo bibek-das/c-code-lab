@@ -1,7 +1,7 @@
-import { topics, problems } from './problems.js?v=3';
+import { topics, problems } from './problems.js?v=5';
 
 const app = document.querySelector('#app');
-const state = { topic: 'loops', section: 'Loop fundamentals', problem: problems[0], input: problems[0].input.default, step: 0, playing: false, speed: 850, timer: null, projector: false };
+const state = { topic: 'loops', section: 'Loop fundamentals', problem: problems[0], input: problems[0].input.default, step: 0, playing: false, speed: 850, timer: null, projector: false, drawerOpen: false, drawerTopic: 'loops', drawerSection: 'Loop fundamentals', drawerProblem: problems[0].id };
 const icons = {
   play: '<path d="m8 5 11 7-11 7V5Z"/>', pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   back: '<path d="m17 5-10 7 10 7V5Z"/>', next: '<path d="m7 5 10 7-10 7V5Z"/>', reset: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/>',
@@ -10,16 +10,31 @@ const icons = {
 };
 function svg(name, size = 18) { return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`; }
 function escapeHTML(value) { return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+function highlightC(line) {
+  if (line.trimStart().startsWith('#')) return `<span class="syntax-preprocessor">${escapeHTML(line)}</span>`;
+  const tokens = /("(?:\\.|[^"\\])*"|\/\/.*|[A-Za-z_]\w*|\d+|==|<=|>=|!=|&&|\|\||[+*\/%=&<>!-])/g;
+  let html = '', last = 0;
+  for (const match of line.matchAll(tokens)) {
+    const value = match[0];
+    html += escapeHTML(line.slice(last, match.index));
+    let type = '';
+    if (value.startsWith('"')) type = 'string';
+    else if (value.startsWith('//')) type = 'comment';
+    else if (/^\d+$/.test(value)) type = 'number';
+    else if (/^(int|char|float|double|void|long|short)$/.test(value)) type = 'type';
+    else if (/^(for|while|if|else|return|break|continue)$/.test(value)) type = 'keyword';
+    else if (/^(printf|scanf|main)$/.test(value)) type = 'function';
+    else if (/^(==|<=|>=|!=|&&|\|\||[+*\/%=&<>!-])$/.test(value)) type = 'operator';
+    html += type ? `<span class="syntax-${type}">${escapeHTML(value)}</span>` : escapeHTML(value);
+    last = match.index + value.length;
+  }
+  return html + escapeHTML(line.slice(last));
+}
 function trace() { return state.problem.trace(state.input); }
 function stop() { clearInterval(state.timer); state.timer = null; state.playing = false; }
 function sectionName(problem) { return problem.section || (problem.topic === 'loops' ? 'Loop fundamentals' : 'Lessons'); }
-function problemOptions() {
-  return topics.map(topic => {
-    const matches = problems.filter(problem => problem.topic === topic.id);
-    const sections = [...new Set(matches.map(sectionName))];
-    return sections.map(section => `<optgroup label="${escapeHTML(topic.label)} · ${escapeHTML(section)}">${matches.filter(problem => sectionName(problem) === section).map(problem => `<option value="${escapeHTML(problem.id)}" ${problem.id === state.problem.id ? 'selected' : ''}>${escapeHTML(problem.label)} · ${escapeHTML(problem.title)}</option>`).join('')}</optgroup>`).join('');
-  }).join('');
-}
+function drawerSections(topic) { return [...new Set(problems.filter(problem => problem.topic === topic).map(sectionName))]; }
+function drawerProblems() { return problems.filter(problem => problem.topic === state.drawerTopic && sectionName(problem) === state.drawerSection); }
 function inputPanel(lesson) {
   if (lesson.input.type === 'array') {
     const { minLength, maxLength, minValue, maxValue } = lesson.input;
@@ -68,11 +83,13 @@ function render() {
   const steps = trace();
   state.step = Math.min(state.step, steps.length - 1);
   const current = steps[state.step];
+  const sourceCode = lesson.codeFor ? lesson.codeFor(state.input) : lesson.code;
   const topicProblems = problems.filter(problem => problem.topic === state.topic);
   const sections = [...new Set(topicProblems.map(sectionName))];
   if (!sections.includes(state.section)) state.section = sections[0];
   const shownProblems = topicProblems.filter(problem => sectionName(problem) === state.section);
-  const problemIndex = problems.findIndex(problem => problem.id === lesson.id);
+  const filteredDrawerProblems = drawerProblems();
+  const drawerIndex = Math.max(0, filteredDrawerProblems.findIndex(problem => problem.id === state.drawerProblem));
   app.innerHTML = `
     <header class="topbar">
       <a class="brand" href="#home" aria-label="C Code Lab home"><span class="brand-mark">{<span>c</span>}</span><span>C Code <strong>Lab</strong></span></a>
@@ -88,7 +105,7 @@ function render() {
           <p>Turn C programs into something you can see, control, and understand. Change an input, step through each line, and discover what happens inside.</p>
           <div class="hero-actions"><a class="primary-action" href="#workspace">Try the visualizer ${svg('arrow', 18)}</a><a class="secondary-action" href="#topics">Browse topics <span>↗</span></a></div>
         </div>
-        <div class="hero-preview" aria-hidden="true"><div class="preview-bar"><span class="window-dots"><i></i><i></i><i></i></span><span>main.c</span><span class="preview-run">● LIVE TRACE</span></div><div class="preview-code"><div><span>03</span><code>int main(void) {</code></div><div><span>04</span><code>  int n;</code></div><div><span>05</span><code>  scanf("%d", &amp;n);</code></div><div class="preview-active"><span>06</span><code>  for (int i = 1; i &lt;= n; i++) {</code></div><div><span>07</span><code>    printf("%d\\n", i);</code></div><div><span>08</span><code>  }</code></div></div><div class="preview-bottom"><span class="preview-arrow">↳</span><div><small>CURRENT STEP</small><strong>Check: 3 ≤ 4 <span>✓ true</span></strong></div></div></div>
+        <div class="hero-preview" aria-hidden="true"><div class="preview-bar"><span class="window-dots"><i></i><i></i><i></i></span><span>main.c</span><span class="preview-run">● LIVE TRACE</span></div><div class="preview-code"><div><span>03</span><code>int main() {</code></div><div><span>04</span><code>  int n;</code></div><div><span>05</span><code>  scanf("%d", &amp;n);</code></div><div class="preview-active"><span>06</span><code>  for (int i = 1; i &lt;= n; i++) {</code></div><div><span>07</span><code>    printf("%d\\n", i);</code></div><div><span>08</span><code>  }</code></div></div><div class="preview-bottom"><span class="preview-arrow">↳</span><div><small>CURRENT STEP</small><strong>Check: 3 ≤ 4 <span>✓ true</span></strong></div></div></div>
         <div class="hero-side-label">SCROLL TO EXPLORE <span>↓</span></div>
       </section>
 
@@ -103,16 +120,17 @@ function render() {
       </section>
 
       <section class="workspace-section" id="workspace"><div class="workspace-heading"><div><span class="section-kicker">THE WORKSPACE</span><h2>Inside the program<span class="period">.</span></h2></div><span class="workspace-label">INTERACTIVE VISUALIZER <span>↘</span></span></div>
-        <div class="workspace-switcher" aria-label="Problem navigation"><div class="switcher-heading"><span class="switcher-icon">↻</span><div><small>YOU'RE EXPLORING</small><strong>${escapeHTML(topics.find(t => t.id === lesson.topic)?.label || 'Problems')} <span>· ${escapeHTML(sectionName(lesson))} · ${String(problemIndex + 1).padStart(2, '0')} / ${String(problems.length).padStart(2, '0')}</span></strong></div></div><div class="switcher-actions"><label class="switcher-select" for="problem-picker"><span>SWITCH PROBLEM</span><select id="problem-picker" aria-label="Switch problem">${problemOptions()}</select></label><button class="switcher-arrow" id="previous-problem" type="button" aria-label="Previous problem" title="Previous problem" ${problemIndex === 0 ? 'disabled' : ''}>←</button><button class="switcher-arrow" id="next-problem" type="button" aria-label="Next problem" title="Next problem" ${problemIndex === problems.length - 1 ? 'disabled' : ''}>→</button><button class="projector-button" id="projector-mode" type="button" aria-pressed="${state.projector}" title="Larger text for a projector">${state.projector ? '◉' : '◯'} Projector</button></div></div>
         <div class="lab-shell"><div class="lab-topline"><div class="lab-title"><span class="lab-icon">{ }</span><div><small>NOW VISUALIZING</small><strong>${escapeHTML(lesson.title)}</strong></div></div><span class="sample-pill">${escapeHTML(lesson.label)}</span></div>
           <div class="problem-statement"><div class="statement-icon">${svg('book', 20)}</div><div><h3>Problem statement</h3><p>${escapeHTML(lesson.statement)}</p><div class="example-row"><span>EXAMPLE</span><code>input: ${escapeHTML(lesson.example.input)}</code><span class="example-arrow">→</span><code class="example-output">${escapeHTML(lesson.example.output)}</code></div></div></div>
           ${inputPanel(lesson)}
-          <div class="visual-grid"><div class="code-panel"><div class="panel-header"><span><i class="panel-dot"></i> SOLUTION.C</span><span>C</span></div><div class="code-list" role="list" aria-label="C source code">${lesson.code.map((line,i) => `<div class="code-line ${current.line === i+1 ? 'active-line' : ''}" role="listitem" ${current.line === i+1 ? 'aria-current="step"' : ''}><span class="line-number">${String(i+1).padStart(2,'0')}</span><code>${escapeHTML(line) || ' '}</code>${current.line === i+1 ? '<span class="line-cursor">●</span>' : ''}</div>`).join('')}</div><div class="code-footer"><span>● Current line</span><span>View only · copying disabled</span></div></div>
+          <div class="visual-grid"><div class="code-panel"><div class="panel-header"><span><i class="panel-dot"></i> SOLUTION.C</span><span>C</span></div><div class="code-list" role="list" aria-label="C source code">${sourceCode.map((line,i) => `<div class="code-line ${current.line === i+1 ? 'active-line' : ''}" role="listitem" ${current.line === i+1 ? 'aria-current="step"' : ''}><span class="line-number">${String(i+1).padStart(2,'0')}</span><code>${highlightC(line) || ' '}</code>${current.line === i+1 ? '<span class="line-cursor">●</span>' : ''}</div>`).join('')}</div><div class="code-footer"><span>● Current line</span><span>View only · copying disabled</span></div></div>
             <div class="state-column"><div class="explain-panel"><div class="panel-header"><span><i class="panel-dot orange"></i> WHAT'S HAPPENING</span><span>STEP ${String(state.step+1).padStart(2,'0')}</span></div><div class="explain-body"><div class="step-label">${current.phase === 'done' ? 'FINISHED' : 'CURRENT STEP'}</div><h3>${escapeHTML(current.title)}</h3><p>${escapeHTML(current.detail)}</p><div class="line-reference">${svg('arrow', 15)} Line ${current.line} is active</div></div></div>${patternBoard(lesson, current, state.input)}${arrayBoard(lesson, current, state.input)}<div class="variables-panel"><div class="panel-header"><span><i class="panel-dot purple"></i> VARIABLE WATCH</span><span>LIVE VALUES</span></div><div class="variable-rows">${Object.entries(current.variables).map(([name,value]) => `<div class="variable-row"><span class="variable-name">${name}</span><span class="variable-type">int</span><strong class="variable-value ${value === null ? 'unset' : ''}">${value === null ? 'unset' : value}</strong></div>`).join('')}</div></div><div class="output-panel"><div class="panel-header"><span><i class="panel-dot green"></i> CONSOLE OUTPUT</span><span>STDOUT</span></div><div class="console-output"><span class="console-prompt">&gt;</span><code>${current.output ? escapeHTML(current.output) : '<span class="console-placeholder">Waiting for output...</span>'}</code><span class="console-cursor"></span></div></div></div></div>
-          <div class="playback"><div class="playback-controls"><button class="icon-button" id="reset" type="button" title="Reset" aria-label="Reset">${svg('reset')}</button><button class="icon-button" id="previous" type="button" title="Previous step" aria-label="Previous step" ${state.step === 0 ? 'disabled' : ''}>${svg('back')}</button><button class="play-button" id="play" type="button" aria-label="${state.playing ? 'Pause' : 'Play'}">${svg(state.playing ? 'pause' : 'play', 20)}<span>${state.playing ? 'Pause' : 'Play'}</span></button><button class="icon-button" id="next" type="button" title="Next step" aria-label="Next step" ${state.step === steps.length-1 ? 'disabled' : ''}>${svg('next')}</button></div><div class="progress-wrap"><div class="progress-top"><span>STEP ${String(state.step+1).padStart(2,'0')} <b>/ ${String(steps.length).padStart(2,'0')}</b></span><span>${Math.round((state.step/(steps.length-1))*100)}%</span></div><input id="scrubber" type="range" min="0" max="${steps.length-1}" value="${state.step}" aria-label="Jump to step" style="--progress:${(state.step/(steps.length-1))*100}%"/></div><div class="speed-control"><label for="speed">SPEED</label><select id="speed" aria-label="Playback speed"><option value="1400" ${state.speed === 1400 ? 'selected' : ''}>0.5×</option><option value="850" ${state.speed === 850 ? 'selected' : ''}>1×</option><option value="430" ${state.speed === 430 ? 'selected' : ''}>2×</option></select></div></div>
+          <div class="playback"><div class="playback-controls"><button class="icon-button" id="reset" type="button" title="Reset" aria-label="Reset">${svg('reset')}</button><button class="icon-button" id="previous" type="button" title="Previous step" aria-label="Previous step" ${state.step === 0 ? 'disabled' : ''}>${svg('back')}</button><button class="play-button" id="play" type="button" aria-label="${state.playing ? 'Pause' : 'Play'}">${svg(state.playing ? 'pause' : 'play', 20)}<span>${state.playing ? 'Pause' : 'Play'}</span></button><button class="icon-button" id="next" type="button" title="Next step" aria-label="Next step" ${state.step === steps.length-1 ? 'disabled' : ''}>${svg('next')}</button></div><div class="progress-wrap"><div class="progress-top"><span>STEP ${String(state.step+1).padStart(2,'0')} <b>/ ${String(steps.length).padStart(2,'0')}</b></span><span>${Math.round((state.step/(steps.length-1))*100)}%</span></div><input id="scrubber" type="range" min="0" max="${steps.length-1}" value="${state.step}" aria-label="Jump to step" style="--progress:${(state.step/(steps.length-1))*100}%"/></div><div class="speed-control"><label for="speed">SPEED</label><select id="speed" aria-label="Playback speed"><option value="1400" ${state.speed === 1400 ? 'selected' : ''}>0.5×</option><option value="850" ${state.speed === 850 ? 'selected' : ''}>1×</option><option value="430" ${state.speed === 430 ? 'selected' : ''}>2×</option></select></div><div class="view-actions"><button class="view-button" id="projector-mode" type="button" aria-pressed="${state.projector}" title="Larger text for a projector">${state.projector ? '◉' : '◯'} Projector</button><button class="view-button" id="fullscreen-mode" type="button" aria-pressed="${Boolean(document.fullscreenElement)}" title="Toggle fullscreen">⛶ <span>${document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'}</span></button></div></div>
         </div>
       </section>
     </main>
+    <button class="lesson-launcher" id="lesson-launcher" type="button" aria-label="Open lesson navigation" aria-controls="lesson-drawer" aria-expanded="${state.drawerOpen}" ${state.drawerOpen ? 'hidden' : ''}><span>☰</span><small>LESSONS</small></button>
+    <div class="lesson-drawer-backdrop" id="lesson-drawer-backdrop" ${state.drawerOpen ? '' : 'hidden'}><aside class="lesson-drawer" id="lesson-drawer" role="dialog" aria-modal="true" aria-label="Lesson navigation"><div class="drawer-head"><div><small>LESSON NAVIGATION</small><h2>Choose a problem</h2></div><button id="drawer-close" type="button" aria-label="Close lesson navigation">×</button></div><div class="drawer-body"><p class="drawer-current">Currently viewing <strong>${escapeHTML(lesson.title)}</strong></p><label for="drawer-topic-picker">TOPIC</label><select id="drawer-topic-picker" aria-label="Filter by topic">${topics.filter(topic => problems.some(problem => problem.topic === topic.id)).map(topic => { const count = problems.filter(problem => problem.topic === topic.id).length; return `<option value="${escapeHTML(topic.id)}" ${state.drawerTopic === topic.id ? 'selected' : ''}>${escapeHTML(topic.label)} · ${count} ${count === 1 ? 'problem' : 'problems'}</option>`; }).join('')}</select><label for="drawer-section-picker">SUBSECTION</label><select id="drawer-section-picker" aria-label="Filter by subsection">${drawerSections(state.drawerTopic).map(section => `<option value="${escapeHTML(section)}" ${state.drawerSection === section ? 'selected' : ''}>${escapeHTML(section)}</option>`).join('')}</select><label for="problem-picker">PROBLEM</label><select id="problem-picker" aria-label="Choose problem">${filteredDrawerProblems.map(problem => `<option value="${escapeHTML(problem.id)}" ${state.drawerProblem === problem.id ? 'selected' : ''}>${escapeHTML(problem.label)} · ${escapeHTML(problem.title)}</option>`).join('')}</select><button class="drawer-open-problem" id="open-problem" type="button">Visualize selected problem ${svg('arrow', 17)}</button><div class="drawer-steps"><button id="previous-problem" type="button" ${drawerIndex === 0 ? 'disabled' : ''}>← Previous</button><span>${drawerIndex + 1} / ${filteredDrawerProblems.length}</span><button id="next-problem" type="button" ${drawerIndex === filteredDrawerProblems.length - 1 ? 'disabled' : ''}>Next →</button></div><a href="#topics" id="browse-topics">Browse all topics ${svg('arrow', 16)}</a></div></aside></div>
     <footer><div class="footer-brand"><span class="brand-mark">{<span>c</span>}</span><span>C Code <strong>Lab</strong></span></div><p>Make the invisible parts of C visible.</p><span>Made for learning, one line at a time. © ${new Date().getFullYear()}</span></footer>
   `;
   document.body.classList.toggle('projector-mode', state.projector);
@@ -152,13 +170,31 @@ function setArraySize(size) {
   const length = Math.max(minLength, Math.min(maxLength, size));
   stop(); state.input = Array.from({ length }, (_, index) => state.input[index] ?? 0); state.step = 0; render();
 }
+function setDrawer(open) {
+  if (open) { state.drawerTopic = state.problem.topic; state.drawerSection = sectionName(state.problem); state.drawerProblem = state.problem.id; }
+  if (open && state.playing) { stop(); state.drawerOpen = true; render(); }
+  state.drawerOpen = open;
+  const launcher = document.querySelector('#lesson-launcher');
+  const backdrop = document.querySelector('#lesson-drawer-backdrop');
+  launcher.hidden = open;
+  launcher.setAttribute('aria-expanded', String(open));
+  backdrop.hidden = !open;
+  (open ? document.querySelector('#drawer-close') : launcher).focus();
+}
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch { /* The browser may deny fullscreen; the normal workspace remains usable. */ }
+}
 function selectProblem(id, scrollToWorkspace = false) {
   const selected = problems.find(problem => problem.id === id);
   if (!selected || selected.id === state.problem.id) {
+    if (state.drawerOpen) setDrawer(false);
     if (scrollToWorkspace) { location.hash = 'workspace'; document.querySelector('#workspace').scrollIntoView({ behavior: 'smooth' }); }
     return;
   }
-  stop(); state.problem = selected; state.topic = selected.topic; state.section = sectionName(selected); state.input = Array.isArray(selected.input.default) ? [...selected.input.default] : selected.input.default; state.step = 0;
+  stop(); state.problem = selected; state.topic = selected.topic; state.section = sectionName(selected); state.input = Array.isArray(selected.input.default) ? [...selected.input.default] : selected.input.default; state.step = 0; state.drawerOpen = false; state.drawerTopic = selected.topic; state.drawerSection = sectionName(selected); state.drawerProblem = selected.id;
   render();
   if (scrollToWorkspace) {
     location.hash = 'workspace';
@@ -172,11 +208,31 @@ function bind() {
   document.querySelectorAll('[data-problem]').forEach(button => button.addEventListener('click', () => {
     selectProblem(button.dataset.problem, true);
   }));
-  document.querySelector('#problem-picker').addEventListener('change', e => selectProblem(e.target.value));
+  document.querySelector('#drawer-topic-picker').addEventListener('change', e => {
+    state.drawerTopic = e.target.value;
+    state.drawerSection = drawerSections(state.drawerTopic)[0];
+    state.drawerProblem = drawerProblems()[0].id;
+    render(); document.querySelector('#drawer-topic-picker').focus();
+  });
+  document.querySelector('#drawer-section-picker').addEventListener('change', e => {
+    state.drawerSection = e.target.value;
+    state.drawerProblem = drawerProblems()[0].id;
+    render(); document.querySelector('#drawer-section-picker').focus();
+  });
+  document.querySelector('#problem-picker').addEventListener('change', e => {
+    state.drawerProblem = e.target.value;
+    render(); document.querySelector('#problem-picker').focus();
+  });
+  document.querySelector('#open-problem').addEventListener('click', () => selectProblem(state.drawerProblem));
+  document.querySelector('#lesson-launcher').addEventListener('click', () => setDrawer(true));
+  document.querySelector('#drawer-close').addEventListener('click', () => setDrawer(false));
+  document.querySelector('#lesson-drawer-backdrop').addEventListener('click', e => { if (e.target.id === 'lesson-drawer-backdrop') setDrawer(false); });
+  document.querySelector('#browse-topics').addEventListener('click', () => setDrawer(false));
   document.querySelector('#section-picker')?.addEventListener('change', e => { state.section = e.target.value; render(); document.querySelector('.catalog-control').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-  document.querySelector('#previous-problem').addEventListener('click', () => selectProblem(problems[problems.findIndex(problem => problem.id === state.problem.id) - 1]?.id));
-  document.querySelector('#next-problem').addEventListener('click', () => selectProblem(problems[problems.findIndex(problem => problem.id === state.problem.id) + 1]?.id));
+  document.querySelector('#previous-problem').addEventListener('click', () => { const matches = drawerProblems(); selectProblem(matches[matches.findIndex(problem => problem.id === state.drawerProblem) - 1]?.id); });
+  document.querySelector('#next-problem').addEventListener('click', () => { const matches = drawerProblems(); selectProblem(matches[matches.findIndex(problem => problem.id === state.drawerProblem) + 1]?.id); });
   document.querySelector('#projector-mode').addEventListener('click', () => { state.projector = !state.projector; render(); });
+  document.querySelector('#fullscreen-mode').addEventListener('click', toggleFullscreen);
   if (state.problem.input.type === 'array') {
     document.querySelector('#array-remove').addEventListener('click', () => setArraySize(state.input.length - 1));
     document.querySelector('#array-add').addEventListener('click', () => setArraySize(state.input.length + 1));
@@ -202,7 +258,15 @@ function bind() {
   document.querySelector('#scrubber').addEventListener('change', e => moveTo(Number(e.target.value)));
   document.querySelector('#speed').addEventListener('change', e => { state.speed = Number(e.target.value); if (state.playing) { stop(); play(); } });
 }
+document.addEventListener('fullscreenchange', () => {
+  const full = Boolean(document.fullscreenElement);
+  document.body.classList.toggle('focus-fullscreen', full);
+  const button = document.querySelector('#fullscreen-mode');
+  if (button) { button.setAttribute('aria-pressed', String(full)); button.querySelector('span').textContent = full ? 'Exit fullscreen' : 'Fullscreen'; }
+  if (full) document.querySelector('#workspace')?.scrollIntoView({ behavior: 'instant' });
+});
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state.drawerOpen) { e.preventDefault(); setDrawer(false); return; }
   if (!location.hash.includes('workspace') || ['INPUT','SELECT','BUTTON'].includes(document.activeElement?.tagName)) return;
   if (e.key === 'ArrowRight') { e.preventDefault(); moveTo(state.step + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); moveTo(state.step - 1); }

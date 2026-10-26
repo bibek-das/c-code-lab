@@ -1,5 +1,5 @@
-import { nestedLoopProblems } from './nested-loops.js?v=2';
-import { arrayProblems } from './array-problems.js?v=3';
+import { nestedLoopProblems } from './nested-loops.js?v=5';
+import { arrayProblems } from './array-problems.js?v=5';
 
 export const topics = [
   { id: 'conditionals', label: 'Conditional statements', short: 'Decisions', icon: '◇', color: '#ad72e6', description: 'Follow the branches that make a program decide.' },
@@ -11,7 +11,7 @@ export const topics = [
   { id: 'pointers', label: 'Pointers', short: 'Pointers', icon: '↗', color: '#a1b8d7', description: 'Make addresses and references visible.' },
 ];
 
-const program = (...body) => ['#include <stdio.h>', '', 'int main(void) {', ...body, '    return 0;', '}'];
+const program = (...body) => ['#include <stdio.h>', '', 'int main() {', ...body, '    return 0;', '}'];
 function recorder(input, extra = {}) {
   const steps = [], values = { n: null, ...extra };
   let output = '';

@@ -26,6 +26,7 @@ test('twenty-one lessons and seven topics are available', () => {
   assert.equal(new Set(problems.map(p => p.id)).size, 21);
   assert.equal(problems.filter(p => p.section === 'Nested loops').length, 10);
   assert.equal(problems.filter(p => p.topic === 'arrays').length, 1);
+  for (const problem of problems) assert.equal(problem.code[2], 'int main() {', problem.id);
 });
 
 test('traces highlight valid lines and end with their full output', () => {
@@ -54,6 +55,11 @@ test('array trace marks comparisons and keeps the first matching minimum index',
   assert.deepEqual(steps.filter(step => step.phase === 'compare').map(step => step.currentIndex), [0, 1, 2, 3]);
   assert.equal(steps.find(step => step.phase === 'update').bestIndex, 1);
   assert.equal(steps.at(-1).readCount, 4);
+  for (const size of [1, 5, 8]) {
+    const source = lesson.codeFor(Array(size).fill(2));
+    assert.ok(source.includes(`    int a[${size}];`));
+    assert.equal(source.length, lesson.code.length);
+  }
 });
 
 test('nested patterns have the intended shape for input 5', () => {
@@ -83,10 +89,13 @@ test('trace output matches compiled C code', { skip: !gccAvailable }, () => {
   const executable = path.join(directory, 'lesson.exe');
   try {
     for (const problem of problems) {
-      writeFileSync(source, problem.code.join('\n') + '\n');
-      const build = spawnSync('gcc', ['-std=c99', '-Wall', '-Wextra', source, '-o', executable], { encoding: 'utf8' });
-      assert.equal(build.status, 0, `${problem.id}: ${build.stderr}`);
-      for (const input of cases[problem.id]) {
+      for (const [index, input] of cases[problem.id].entries()) {
+        if (index === 0 || problem.codeFor) {
+          const shownCode = problem.codeFor ? problem.codeFor(input) : problem.code;
+          writeFileSync(source, shownCode.join('\n') + '\n');
+          const build = spawnSync('gcc', ['-std=c99', '-Wall', '-Wextra', source, '-o', executable], { encoding: 'utf8' });
+          assert.equal(build.status, 0, `${problem.id} input ${input}: ${build.stderr}`);
+        }
         const stdin = problem.input.type === 'array' ? `${input.length}\n${input.join(' ')}\n` : `${input}\n`;
         const run = spawnSync(executable, { input: stdin, encoding: 'utf8' });
         assert.equal(run.status, 0, `${problem.id} input ${input}: ${run.stderr}`);

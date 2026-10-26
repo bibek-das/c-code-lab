@@ -1,4 +1,4 @@
-const program = (...body) => ['#include <stdio.h>', '', 'int main(void) {', ...body, '    return 0;', '}'];
+const program = (...body) => ['#include <stdio.h>', '', 'int main() {', ...body, '    return 0;', '}'];
 
 const lessons = [
   { id: 'nested-square', title: 'Square of Stars', statement: 'Input N and print an N × N square of stars. Both loops run N times.', shape: 'square', style: 'for', token: 'star', example: '* * * * *\n* * * * *\n* * * * *\n* * * * *\n* * * * *' },

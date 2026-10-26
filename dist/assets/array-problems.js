@@ -1,7 +1,7 @@
 const code = [
   '#include <stdio.h>',
   '',
-  'int main(void) {',
+  'int main() {',
   '    int n;',
   '    scanf("%d", &n);',
   '    int a[8];',
@@ -20,6 +20,7 @@ const code = [
   '    return 0;',
   '}',
 ];
+const codeFor = input => code.map(line => line.replace('int a[8];', `int a[${input.length}];`));
 
 function traceSmallest(input) {
   const a = [...input];
@@ -84,6 +85,7 @@ export const arrayProblems = [{
   statement: 'Input N integers. Find the smallest value and the index where it first appears. Array indexes begin at 0.',
   example: { input: '5 values: 7, 3, 9, -2, 4', output: 'Smallest: -2 at index 3' },
   input: { type: 'array', label: 'Edit the array', minLength: 1, maxLength: 8, minValue: -20, maxValue: 99, default: [7, 3, 9, -2, 4] },
-  code,
+  code: codeFor([7, 3, 9, -2, 4]),
+  codeFor,
   trace: traceSmallest,
 }];

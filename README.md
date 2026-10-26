@@ -27,7 +27,9 @@ Edit `dist/assets/problems.js` for the original loop lessons, `dist/assets/neste
 
 The Loops section contains ten fundamental lessons and ten nested loop pattern lessons. The Arrays section currently contains Find the Smallest Number. Its input is a short editable array, and its trace records the current index, best index, and how many values have been read so the array visualizer can highlight the right boxes. Keep accepted inputs small enough that the number of steps stays comfortable for students.
 
-The topic catalog has a subsection dropdown. While using the visualizer, the lesson switcher stays at the top of the screen with problems grouped by topic and subsection. The Projector button enlarges text in the workspace. Playback controls stay visible at the bottom, and the active code line remains in view for longer solutions. Normal text selection and copy actions are disabled within the solution panel.
+The array lesson also supplies `codeFor(input)`, which renders the declaration as `a[N]` for the chosen array length. The displayed version is the one compiled for that input by the lesson tests.
+
+The topic catalog has a subsection dropdown. A small Lessons tab on the right edge opens a navigation drawer: choose a topic, then a subsection, then a problem. Only problems in that selection appear. The playback bar offers Projector and Fullscreen controls. Fullscreen focuses on the workspace, while the lesson drawer remains available. The active code line remains in view for longer solutions. Normal text selection and copy actions are disabled within the solution panel.
 
 For the supplied Sum of Digits solution, the final `printf` uses `sum` rather than the undefined `rev`. The multiplication table adds a newline after each row. Prime Check handles 1 separately because it is neither prime nor composite. Count Digits, Reverse a Number, and Sum of Digits accept positive integers in this version.
 
