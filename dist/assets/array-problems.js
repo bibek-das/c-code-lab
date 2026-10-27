@@ -1,3 +1,5 @@
+import { extraArrayProblems } from './array-extra.js?v=8';
+
 const code = [
   '#include <stdio.h>',
   '',
@@ -88,4 +90,4 @@ export const arrayProblems = [{
   code: codeFor([7, 3, 9, -2, 4]),
   codeFor,
   trace: traceSmallest,
-}];
+}, ...extraArrayProblems];

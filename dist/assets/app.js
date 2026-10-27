@@ -1,7 +1,7 @@
-import { topics, problems } from './problems.js?v=5';
+import { topics, problems } from './problems.js?v=8';
 
 const app = document.querySelector('#app');
-const state = { topic: 'loops', section: 'Loop fundamentals', problem: problems[0], input: problems[0].input.default, step: 0, playing: false, speed: 850, timer: null, projector: false, drawerOpen: false, drawerTopic: 'loops', drawerSection: 'Loop fundamentals', drawerProblem: problems[0].id, showExplanation: true, codeFont: 16, codeWidth: 54, codeHeight: null };
+const state = { topic: 'loops', section: 'Loop fundamentals', problem: problems[0], input: problems[0].input.default, key: null, step: 0, playing: false, speed: 850, timer: null, projector: false, drawerOpen: false, drawerTopic: 'loops', drawerSection: 'Loop fundamentals', drawerProblem: problems[0].id, showExplanation: true, codeFont: 16, codeWidth: 54, codeHeight: null };
 const icons = {
   play: '<path d="m8 5 11 7-11 7V5Z"/>', pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   back: '<path d="m17 5-10 7 10 7V5Z"/>', next: '<path d="m7 5 10 7-10 7V5Z"/>', reset: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/>',
@@ -30,7 +30,7 @@ function highlightC(line) {
   }
   return html + escapeHTML(line.slice(last));
 }
-function trace() { return state.problem.trace(state.input); }
+function trace() { return state.problem.trace(state.input, state.key); }
 function stop() { clearInterval(state.timer); state.timer = null; state.playing = false; }
 function sectionName(problem) { return problem.section || (problem.topic === 'loops' ? 'Loop fundamentals' : 'Lessons'); }
 function drawerSections(topic) { return [...new Set(problems.filter(problem => problem.topic === topic).map(sectionName))]; }
@@ -38,21 +38,42 @@ function drawerProblems() { return problems.filter(problem => problem.topic === 
 function inputPanel(lesson) {
   if (lesson.input.type === 'array') {
     const { minLength, maxLength, minValue, maxValue } = lesson.input;
-    return `<div class="array-input-panel"><div class="array-input-head"><div><strong>Edit the array</strong><small>Choose 1–8 values, each from ${minValue} to ${maxValue}. Changes restart the animation.</small></div><div class="array-size-controls"><span>SIZE <b>n = ${state.input.length}</b></span><button id="array-remove" type="button" aria-label="Remove last array value" ${state.input.length <= minLength ? 'disabled' : ''}>−</button><button id="array-add" type="button" aria-label="Add array value" ${state.input.length >= maxLength ? 'disabled' : ''}>+</button></div></div><div class="array-value-inputs">${state.input.map((value, index) => `<label><span>INDEX ${index}</span><input class="array-value-input" data-array-index="${index}" type="number" inputmode="numeric" min="${minValue}" max="${maxValue}" value="${value}" aria-label="Value at index ${index}"></label>`).join('')}</div><button id="array-mix" class="array-mix" type="button">↻ Mix values</button></div>`;
+    return `<div class="array-input-panel"><div class="array-input-head"><div><strong>Edit the array</strong><small>Choose 1–8 values, each from ${minValue} to ${maxValue}. Changes restart the animation.</small></div><div class="array-size-controls"><span>SIZE <b>n = ${state.input.length}</b></span><button id="array-remove" type="button" aria-label="Remove last array value" ${state.input.length <= minLength ? 'disabled' : ''}>−</button><button id="array-add" type="button" aria-label="Add array value" ${state.input.length >= maxLength ? 'disabled' : ''}>+</button></div></div><div class="array-value-inputs">${state.input.map((value, index) => `<label><span>INDEX ${index}</span><input class="array-value-input" data-array-index="${index}" type="number" inputmode="numeric" min="${minValue}" max="${maxValue}" value="${value}" aria-label="Value at index ${index}"></label>`).join('')}</div><div class="array-input-actions"><button id="array-mix" class="array-mix" type="button">↻ Mix values</button>${lesson.input.key !== undefined ? `<label class="array-key-input">TARGET k <input id="array-key" type="number" inputmode="numeric" min="${minValue}" max="${maxValue}" value="${state.key}" aria-label="Target value k"></label>` : ''}</div></div>`;
   }
   return `<div class="input-panel"><div class="input-label"><label for="number-input">${escapeHTML(lesson.input.label)} <span>n</span></label><small>Small inputs keep the steps clear · ${lesson.input.min}–${lesson.input.max}</small></div><div class="input-controls"><button type="button" id="decrease" aria-label="Decrease N" ${state.input <= lesson.input.min ? 'disabled' : ''}>−</button><input id="number-input" type="number" min="${lesson.input.min}" max="${lesson.input.max}" value="${state.input}" inputmode="numeric" aria-describedby="input-help"/><button type="button" id="increase" aria-label="Increase N" ${state.input >= lesson.input.max ? 'disabled' : ''}>+</button><span id="input-help" class="input-hint">Press Enter to update</span></div></div>`;
 }
 function arrayBoard(lesson, current, values) {
   if (lesson.input.type !== 'array') return '';
-  const boxes = values.map((value, index) => {
+  const shown = current.array || values;
+  const swapping = current.swap && current.phase.startsWith('swap-');
+  const lifted = ['swap-lift', 'swap-travel', 'swap-right'].includes(current.phase);
+  const boxes = shown.map((value, index) => {
     const isCurrent = current.currentIndex === index;
+    const isSecond = current.secondIndex === index;
     const isBest = current.bestIndex === index;
     const isRead = index < current.readCount;
-    return `<div class="array-cell ${isCurrent ? 'array-current' : ''} ${isBest ? 'array-best' : ''} ${current.phase === 'update' && isCurrent ? 'array-updated' : ''}"><span class="array-index">INDEX ${index}</span><strong class="array-value">${isRead ? value : '·'}</strong><span class="array-cell-tag">${isCurrent && isBest ? 'CHECK + BEST' : isCurrent ? 'CHECKING' : isBest ? 'BEST' : '&nbsp;'}</span></div>`;
+    const isMatch = current.phase === 'match' && isCurrent;
+    const ghost = lifted && (isCurrent || isSecond) && !(current.phase === 'swap-right' && isSecond);
+    const tag = swapping && isCurrent ? 'LEFT' : swapping && isSecond ? 'RIGHT' : isCurrent && isBest ? 'CHECK + BEST' : isMatch ? 'MATCH' : isCurrent ? 'CHECKING' : isSecond ? 'PAIR' : isBest ? 'BEST' : '&nbsp;';
+    return `<div class="array-cell ${isCurrent ? 'array-current' : ''} ${isSecond ? 'array-second' : ''} ${isBest ? 'array-best' : ''} ${isMatch ? 'array-match' : ''} ${ghost ? 'array-ghost' : ''} ${current.phase === 'swap-place' && (isCurrent || isSecond) ? 'array-landed' : ''} ${current.phase === 'update' && isCurrent ? 'array-updated' : ''}"><span class="array-index">INDEX ${index}</span><strong class="array-value">${isRead ? value : '·'}</strong><span class="array-cell-tag">${tag}</span></div>`;
   }).join('');
-  const candidate = current.currentIndex === null || current.currentIndex >= current.readCount ? '—' : values[current.currentIndex];
-  const best = current.variables.ans ?? '—';
-  return `<div class="array-panel"><div class="panel-header"><span><i class="panel-dot orange"></i> ARRAY VISUALIZER</span><span>a[${values.length}]</span></div><div class="array-board">${boxes}</div><div class="array-comparison"><div><small>CURRENT a[i]</small><strong>${candidate}</strong></div><span class="comparison-symbol">${current.phase === 'compare' ? '&lt;' : '→'}</span><div><small>SMALLEST SO FAR</small><strong>${best}</strong></div><span class="comparison-result">${current.phase === 'compare' ? (candidate < best ? 'YES · UPDATE' : 'NO · KEEP') : current.phase === 'update' ? 'NEW BEST!' : ''}</span></div><div class="array-legend"><span><i class="legend-current"></i> Checking</span><span><i class="legend-best"></i> Smallest so far</span></div></div>`;
+  const swap = current.swap;
+  const chips = lifted ? `<div class="swap-stage ${current.phase === 'swap-travel' ? 'swap-travel' : ''}" style="--array-count:${values.length}">${current.phase !== 'swap-right' ? `<span class="swap-chip swap-chip-left" style="grid-column:${swap.from + 1};--shift:${(swap.to - swap.from) * 74}px">${swap.left}</span>` : ''}<span class="swap-chip swap-chip-right" style="grid-column:${current.phase === 'swap-right' ? swap.from + 1 : swap.to + 1};--shift:${(swap.from - swap.to) * 74}px">${swap.right}</span></div>` : '';
+  const candidate = current.currentIndex === null || current.currentIndex >= current.readCount ? '—' : shown[current.currentIndex];
+  let metrics = '';
+  if (lesson.id === 'array-smallest') {
+    const best = current.variables.ans ?? '—';
+    metrics = `<div class="array-comparison"><div><small>CURRENT a[i]</small><strong>${candidate}</strong></div><span class="comparison-symbol">${current.phase === 'compare' ? '&lt;' : '→'}</span><div><small>SMALLEST SO FAR</small><strong>${best}</strong></div><span class="comparison-result">${current.phase === 'compare' ? (candidate < best ? 'YES · UPDATE' : 'NO · KEEP') : current.phase === 'update' ? 'NEW BEST!' : ''}</span></div>`;
+  } else if (lesson.id === 'array-even-odd') {
+    const even = current.variables.evenCnt ?? '—';
+    metrics = `<div class="array-comparison"><div><small>EVEN FOUND</small><strong>${even}</strong></div><span class="comparison-symbol">+</span><div><small>ODD = n − EVEN</small><strong>${typeof even === 'number' ? values.length - even : '—'}</strong></div></div>`;
+  } else if (lesson.id === 'array-search' || lesson.id === 'array-occurrences') {
+    const result = lesson.id === 'array-search' ? current.variables.idx : current.variables.cnt;
+    metrics = `<div class="array-comparison"><div><small>TARGET k</small><strong>${current.variables.k ?? '—'}</strong></div><span class="comparison-symbol">${current.phase === 'compare' ? '=' : '→'}</span><div><small>${lesson.id === 'array-search' ? 'FOUND INDEX' : 'OCCURRENCES'}</small><strong>${result ?? '—'}</strong></div></div>`;
+  } else if (lesson.id === 'array-reverse') {
+    metrics = `<div class="array-comparison"><div><small>LEFT INDEX i</small><strong>${current.variables.i ?? '—'}</strong></div><span class="comparison-symbol">↔</span><div><small>RIGHT INDEX j</small><strong>${current.variables.j ?? '—'}</strong></div><div><small>TEMPORARY tmp</small><strong>${current.variables.tmp ?? '—'}</strong></div></div>`;
+  }
+  return `<div class="array-panel"><div class="panel-header"><span><i class="panel-dot orange"></i> ARRAY VISUALIZER</span><span>a[${values.length}]</span></div><div class="array-board-scroll">${chips}<div class="array-board" style="--array-count:${values.length}">${boxes}</div></div>${metrics}<div class="array-legend"><span><i class="legend-current"></i> ${lesson.id === 'array-reverse' ? 'Left value' : 'Checking'}</span><span><i class="legend-best"></i> ${lesson.id === 'array-reverse' ? 'Right value' : lesson.id === 'array-smallest' ? 'Smallest so far' : 'Match'}</span></div></div>`;
 }
 function lessonCards(items) {
   return `<div class="lesson-grid">${items.map(problem => `<div class="lesson-card"><div class="lesson-card-main"><div class="lesson-kicker"><span class="sample-pill">${escapeHTML(problem.label || 'LESSON')}</span><span class="lesson-dot">•</span>${escapeHTML(problem.level)}<span class="lesson-dot">•</span>${escapeHTML(problem.time)}</div><h4>${escapeHTML(problem.title)}</h4><p>${escapeHTML(problem.statement)}</p></div><button type="button" data-problem="${escapeHTML(problem.id)}" class="lesson-open">Visualize ${svg('arrow', 18)}</button></div>`).join('')}</div>`;
@@ -236,7 +257,7 @@ function selectProblem(id, scrollToWorkspace = false) {
     if (scrollToWorkspace) { location.hash = 'workspace'; document.querySelector('#workspace').scrollIntoView({ behavior: 'smooth' }); }
     return;
   }
-  stop(); state.problem = selected; state.topic = selected.topic; state.section = sectionName(selected); state.input = Array.isArray(selected.input.default) ? [...selected.input.default] : selected.input.default; state.step = 0; state.drawerOpen = false; state.drawerTopic = selected.topic; state.drawerSection = sectionName(selected); state.drawerProblem = selected.id;
+  stop(); state.problem = selected; state.topic = selected.topic; state.section = sectionName(selected); state.input = Array.isArray(selected.input.default) ? [...selected.input.default] : selected.input.default; state.key = selected.input.key ?? null; state.step = 0; state.drawerOpen = false; state.drawerTopic = selected.topic; state.drawerSection = sectionName(selected); state.drawerProblem = selected.id;
   render();
   if (scrollToWorkspace) {
     location.hash = 'workspace';
@@ -290,6 +311,16 @@ function bind() {
     document.querySelector('#array-remove').addEventListener('click', () => setArraySize(state.input.length - 1));
     document.querySelector('#array-add').addEventListener('click', () => setArraySize(state.input.length + 1));
     document.querySelector('#array-mix').addEventListener('click', () => { stop(); state.input = state.input.map(() => Math.floor(Math.random() * 29) - 9); state.step = 0; render(); });
+    const keyInput = document.querySelector('#array-key');
+    if (keyInput) {
+      const updateKey = () => {
+        const raw = Number(keyInput.value);
+        state.key = keyInput.value.trim() && Number.isInteger(raw) ? Math.max(state.problem.input.minValue, Math.min(state.problem.input.maxValue, raw)) : state.key;
+        stop(); state.step = 0; render();
+      };
+      keyInput.addEventListener('change', updateKey);
+      keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); updateKey(); } });
+    }
     document.querySelectorAll('.array-value-input').forEach(input => {
       input.addEventListener('change', () => setArrayValue(Number(input.dataset.arrayIndex), input.value));
       input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setArrayValue(Number(input.dataset.arrayIndex), input.value); } });

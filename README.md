@@ -12,7 +12,7 @@ Visit `http://localhost:4173`.
 
 ## Add a lecturer-supplied problem
 
-Edit `dist/assets/problems.js` for the original loop lessons, `dist/assets/nested-loops.js` for nested loops, or `dist/assets/array-problems.js` for array lessons. Each problem has a topic ID, statement, example, input bounds, C source lines, and a `trace(input)` function. The trace returns an array of execution snapshots:
+Edit `dist/assets/problems.js` for the original loop lessons, `dist/assets/nested-loops.js` for nested loops, `dist/assets/array-problems.js` for the smallest-value lesson, or `dist/assets/array-extra.js` for the other array lessons. Each problem has a topic ID, statement, example, input bounds, C source lines, and a `trace(input)` function. The trace returns an array of execution snapshots:
 
 ```js
 {
@@ -25,9 +25,9 @@ Edit `dist/assets/problems.js` for the original loop lessons, `dist/assets/neste
 }
 ```
 
-The Loops section contains ten fundamental lessons and ten nested loop pattern lessons. The Arrays section currently contains Find the Smallest Number. Its input is a short editable array, and its trace records the current index, best index, and how many values have been read so the array visualizer can highlight the right boxes. Keep accepted inputs small enough that the number of steps stays comfortable for students.
+The Loops section contains ten fundamental lessons and ten nested loop pattern lessons. The Arrays section contains five lessons: smallest value, even/odd counts, search by index, occurrence count, and reverse. All use short editable arrays. Search and occurrence count also have an editable target `k`. The reverse trace stores each array snapshot and animates the selected pair rising, crossing, and landing. Keep accepted inputs small enough that the number of steps stays comfortable for students.
 
-The array lesson also supplies `codeFor(input)`, which renders the declaration as `a[N]` for the chosen array length. The displayed version is the one compiled for that input by the lesson tests.
+Each array lesson supplies `codeFor(input)`, which renders the declaration as `a[N]` for the chosen array length. The displayed version is the one compiled for that input by the lesson tests.
 
 The topic catalog has a subsection dropdown. A small Lessons tab on the right edge opens a navigation drawer: choose a topic, then a subsection, then a problem. Only problems in that selection appear. The playback bar offers Show/Hide explanation, Projector, and Fullscreen controls. The code panel has font-size buttons, a divider that changes its width, and a footer grip that changes its height. Fullscreen focuses on the workspace, while the lesson drawer remains available. The active code line remains in view for longer solutions. Normal text selection and copy actions are disabled within the solution panel.
 

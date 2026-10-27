@@ -1,5 +1,5 @@
 import { nestedLoopProblems } from './nested-loops.js?v=5';
-import { arrayProblems } from './array-problems.js?v=5';
+import { arrayProblems } from './array-problems.js?v=8';
 
 export const topics = [
   { id: 'conditionals', label: 'Conditional statements', short: 'Decisions', icon: '◇', color: '#ad72e6', description: 'Follow the branches that make a program decide.' },

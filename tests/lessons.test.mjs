@@ -18,14 +18,18 @@ const cases = {
   'nested-shrinking-while': [1, 5, 6], 'nested-number-growing': [1, 5, 6],
   'nested-number-shrinking': [1, 5, 6], 'nested-binary': [1, 5, 6],
   'array-smallest': [[7, 3, 9, -2, 4], [5], [4, 1, 1, 7], [-3, -8, -1, -8, 2, 0, 9, 1]],
+  'array-even-odd': [[4, 7, 0, 9, 2], [-3], [2, 4, 6, 8], [1, 3, 5, 7]],
+  'array-search': [[7, 3, 9, 3, 4], [3], [1, 2, 4], [3, 3, 3]],
+  'array-occurrences': [[2, 4, 2, 7, 2], [2], [1, 3, 4], [2, 2, 2, 2]],
+  'array-reverse': [[1, 2, 3, 4, 5], [9], [1, 2, 3, 4], [1, 2, 3, 4, 5, 6, 7, 8]],
 };
 
-test('twenty-one lessons and seven topics are available', () => {
-  assert.equal(problems.length, 21);
+test('twenty-five lessons and seven topics are available', () => {
+  assert.equal(problems.length, 25);
   assert.equal(topics.length, 7);
-  assert.equal(new Set(problems.map(p => p.id)).size, 21);
+  assert.equal(new Set(problems.map(p => p.id)).size, 25);
   assert.equal(problems.filter(p => p.section === 'Nested loops').length, 10);
-  assert.equal(problems.filter(p => p.topic === 'arrays').length, 1);
+  assert.equal(problems.filter(p => p.topic === 'arrays').length, 5);
   for (const problem of problems) assert.equal(problem.code[2], 'int main() {', problem.id);
 });
 
@@ -59,6 +63,23 @@ test('array trace marks comparisons and keeps the first matching minimum index',
     const source = lesson.codeFor(Array(size).fill(2));
     assert.ok(source.includes(`    int a[${size}];`));
     assert.equal(source.length, lesson.code.length);
+  }
+});
+
+test('new array traces count, find, and reverse correctly', () => {
+  const get = id => problems.find(problem => problem.id === id);
+  assert.equal(get('array-even-odd').trace([-2, 0, 3, 5]).at(-1).output, 'There are 2 even numbers\nThere are 2 odd numbers\n');
+  const search = get('array-search');
+  assert.equal(search.trace([3, 8, 3], 3).at(-1).output, 'Found 3 at index 0');
+  assert.equal(search.trace([3, 8, 3], 5).at(-1).output, 'Not found');
+  assert.equal(search.trace([3, 8, 3], 3).filter(step => step.phase === 'compare').length, 1);
+  assert.equal(get('array-occurrences').trace([2, 2, 7, 2], 2).at(-1).output, '3');
+  const reverse = get('array-reverse').trace([1, 2, 3, 4, 5]);
+  assert.deepEqual(reverse.filter(step => step.phase === 'swap-lift').map(step => step.array), [[1, 2, 3, 4, 5], [5, 2, 3, 4, 1]]);
+  assert.deepEqual(reverse.filter(step => step.phase === 'swap-place').map(step => step.array), [[5, 2, 3, 4, 1], [5, 4, 3, 2, 1]]);
+  assert.equal(reverse.at(-1).output, '5 4 3 2 1 ');
+  for (const lesson of problems.filter(problem => problem.topic === 'arrays')) {
+    for (const size of [1, 5, 8]) assert.ok(lesson.codeFor(Array(size).fill(2)).includes(`    int a[${size}];`), lesson.id);
   }
 });
 
@@ -96,7 +117,7 @@ test('trace output matches compiled C code', { skip: !gccAvailable }, () => {
           const build = spawnSync('gcc', ['-std=c99', '-Wall', '-Wextra', source, '-o', executable], { encoding: 'utf8' });
           assert.equal(build.status, 0, `${problem.id} input ${input}: ${build.stderr}`);
         }
-        const stdin = problem.input.type === 'array' ? `${input.length}\n${input.join(' ')}\n` : `${input}\n`;
+        const stdin = problem.input.type === 'array' ? `${input.length}${problem.input.key === undefined ? '' : ` ${problem.input.key}`}\n${input.join(' ')}\n` : `${input}\n`;
         const run = spawnSync(executable, { input: stdin, encoding: 'utf8' });
         assert.equal(run.status, 0, `${problem.id} input ${input}: ${run.stderr}`);
         assert.equal(problem.trace(input).at(-1).output, run.stdout.replace(/\r\n/g, '\n'), `${problem.id} input ${input}`);
